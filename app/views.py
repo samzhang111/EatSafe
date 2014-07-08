@@ -12,7 +12,7 @@ from database import session
 from schema import Inspection, Restaurant
 from math import radians, cos, sin, asin, sqrt
 from sqlalchemy.sql import func
-from helpers import haversine, get_rating, get_geo, get_yelp_json
+from helpers import haversine, get_rating, get_geo
 import requests
 import urllib
 #from settings import gkey, ykey

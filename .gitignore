@@ -5,3 +5,4 @@ data/
 db/
 scratch/
 app/settings.py
+app/settings_dokku.py

@@ -15,9 +15,12 @@ from sqlalchemy.sql import func
 from helpers import haversine, get_rating, get_geo, get_yelp_json
 import requests
 import urllib
-from settings import gkey, ykey
-
+#from settings import gkey, ykey
+import os
 from werkzeug.contrib.cache import SimpleCache
+
+gkey = os.environ['GOOGLE_PLACES_KEY']
+ykey = os.environ['YELP_KEY']
 
 cache = SimpleCache()
 #google API query

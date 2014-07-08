@@ -3,10 +3,7 @@ from flask.ext.whooshee import Whooshee
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy import Column, Integer, Float, String, Date
 
-from settings import WHOOSH_BASE
-
 Base = declarative_base()
-whooshee = Whooshee(app)
 
 class Inspection(Base):
     __tablename__ = 'inspections_clean'
@@ -30,8 +27,6 @@ class Inspection(Base):
     Complaint = Column(Integer)
     Failure = Column(Integer)
 
-@whooshee.register_model('db_name', 'db_addr', 'google_name', 'yelp_name',
-        'yelp_address')
 class Restaurant(Base):
     __tablename__ = 'restaurant_indexed'
     #__searchable__ = ['db_name', 'db_addr', 

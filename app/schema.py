@@ -1,5 +1,4 @@
 from app import app
-from flask.ext.whooshee import Whooshee
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy import Column, Integer, Float, String, Date
 

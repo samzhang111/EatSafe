@@ -29,12 +29,22 @@ ginstant = 'https://maps.googleapis.com/maps/api/place/autocomplete/json?input={
 
 default_photo = 'http://s3-media1.fl.yelpcdn.com/assets/2/www/img/5f69f303f17c/default_avatars/business_medium_square.png'
 
+
 #============================================================================
-# Failed attempt at creating a web version of the app
+# Inspection detail API
 ##===========================================================================
-@app.route('/map')
-def show_map():
-    return render_template('map.html', key=gkey)
+@app.route('/inspection')
+def inspection():
+    inspection_id = request.args.get('id', '', type=str)
+    if not inspection_id:
+        abort(400)
+
+    q = session.query(Inspection.Violations).filter(
+            Inspection.Inspection_ID==inspection_id).all()
+
+    if q:
+        return q[0]
+
 
 @app.route('/instant')
 def instant():
@@ -48,8 +58,8 @@ def instant():
     if long and lat are not provided, the center of Chicago is used
     """
     query = request.args.get('query', '', type=str)
-    longitude = request.args.get('long', '-87.625916', type=str)
-    latitude = request.args.get('lat', '41.903196', type=str)
+    longitude = request.args.get('long', '-87.625916', type=float)
+    latitude = request.args.get('lat', '41.903196', type=float)
     
     if not query or not longitude or not latitude:
         abort(400)
@@ -59,7 +69,66 @@ def instant():
             lng=longitude,
             g=gkey
             )
- 
+
+    q = session.query(
+        Restaurant.restaurant_id,
+        Restaurant.google_id,
+        Restaurant.db_name,
+        Restaurant.db_addr,
+        Restaurant.google_name,
+        Restaurant.google_lat,
+        Restaurant.google_lng,
+        Restaurant.yelp_name,
+        Restaurant.yelp_rating,
+        Restaurant.yelp_review_count,
+        Restaurant.yelp_photo_url,
+        Restaurant.yelp_address,
+        Restaurant.yelp_zip,
+        Restaurant.yelp_phone,
+        Restaurant.rating,
+        Restaurant.complaints,
+        Restaurant.db_long,
+        Restaurant.db_lat,
+        Restaurant.num,
+        Restaurant.failures).\
+                filter(Restaurant.db_name.ilike('%{}%'.format(query))|
+                        Restaurant.db_addr.ilike('%{}%'.format(query)))\
+                .all()
+    
+    results = []
+    
+    for row in q:
+        d = row.__dict__
+        d.pop('_labels')
+        lon = d['db_long'] or float(d['google_lng'])
+        lat = d['db_lat'] or float(d['google_lat'])
+        
+        name = d['google_name'] or d['yelp_name'] or d['db_name']
+        addr = d['yelp_address'] or d['db_addr']
+        photo = d['yelp_photo_url'] or default_photo
+        
+        rating = get_rating(d['rating'])
+        d['d'] = haversine(lon, lat, longitude, latitude)
+        results.append({
+                'name': name,
+                'id': d['restaurant_id'],
+                'address': addr,
+                'd': d['d'],
+                'dist': convert_to_miles(d['d']),
+                'pic': photo,
+                'rating': rating,
+                'yelp_rating': d['yelp_rating'],
+                'new': d['num'] <= 1,
+                'count': d['num'] 
+            })
+
+    results = sorted(results, key=lambda x: x['d'])[:10]
+
+    map(lambda x: x.pop('d'), results)
+
+    return Response(json.dumps(results), mimetype='text/json')
+
+"""
     try:
         r = requests.get(gq)
     except requests.ConnectionError:
@@ -72,21 +141,22 @@ def instant():
         j = r.json()
     except JSONDecodeError:
         abort(500)
- 
-    all_restaurants_dict = get_restaurants_dict()
 
-    result = []
-    if j and j.has_key('predictions'):
-        print j
-        for pred in j['predictions']:
-            try:
-                item = all_restaurants_dict[pred['place_id']]
-                result.append(item)
-            except KeyError:
-                continue
-        
+    if not j['status'] == 'OK':
+        abort(500)
+    
+    rd = get_restaurants_dict()
+
+    result = [] 
+    for answer in j['predictions']:
+        try:
+            rd[answer['place_id']].pop('_labels')
+            result.append(rd[answer['place_id']])
+        except KeyError:
+            pass
+
     return Response(json.dumps(result), mimetype='text/json')
-
+"""
 
 @app.route('/place')
 def place():
@@ -97,7 +167,7 @@ def place():
      particular establishment.
 
      Takes:
-       - id  : the Google Places ID of the establishment
+       - id  : the Restaurant ID of the establishment
 
      returns:
     {
@@ -124,12 +194,13 @@ def place():
     }
     """ 
 
-    google_id = request.args.get('id', '', type=str)
+    rid = request.args.get('id', '', type=str)
     
-    if not google_id:
+    if not rid:
         abort(400)
 
     info = session.query(
+        Restaurant.restaurant_id,
         Restaurant.google_id,
         Restaurant.db_name,
         Restaurant.db_addr,
@@ -149,7 +220,7 @@ def place():
         Restaurant.db_long,
         Restaurant.db_lat,
         Restaurant.num,
-        Restaurant.failures).filter(Restaurant.google_id==google_id).one()
+        Restaurant.failures).filter(Restaurant.restaurant_id==rid).one()
     
     info_dict = info.__dict__
 
@@ -178,9 +249,8 @@ def place():
     for inspection in inspections:
         inspections_dict.append(dict(zip(inspection_cols, inspection)))
 
-
     returned = {
-            'id': info_dict['google_id'],
+            'id': info_dict['restaurant_id'],
             'name': name,
             'addr': addr,
             'pic': photo,
@@ -245,25 +315,21 @@ returns:
     for row in all_restaurants:
         row = row.__dict__
 
-        # throw away all restaurants without google IDs
-        if not row['google_id']:
-            continue
-        
         # throw away restaurants without longitude
         if not row['db_long'] and not row['google_lng']:
             continue
         
         # use google stuff when we have it
         if row['google_lng']:
-            lng, lat = map(float, 
-                    (row['google_lng'], row['google_lat']))
+            lng, lat = map(float, (row['google_lng'], row['google_lat']))
         else:
-            lng, lat = row['db_long'], row['db_lat']
+            lng, lat = map(float, (row['db_long'], row['db_lat']))
 
         d = haversine(longitude, latitude, lng, lat)
 
         if d < MAX_DIST:
             row['d'] = d
+            miles = convert_to_miles(d)
             valid.append(row)
 
     closest = sorted(valid, key=lambda x: x['d'])[:20]
@@ -276,14 +342,11 @@ returns:
         new = row['num'] <= 1
         
         
-        if row['d'] < 1609:
-            miles = '%.2f'%(row['d']*0.000621371)
-        else:
-            miles = '%.1f'%(row['d']*0.000621371)
+        name = row['google_name'] or row['yelp_name'] or row['db_name']
         
         results.append({
                 'name': row['google_name'],
-                'id': row['google_id'],
+                'id': row['restaurant_id'],
                 'address': addr,
                 'dist': miles,
                 'pic': photo,
@@ -292,17 +355,19 @@ returns:
                 'new': new
             })
     
-
+    
     # formulate json response
     return Response(json.dumps(results), mimetype='text/json')
 
 @app.errorhandler(400)
-def bad_request():
-    return json.dumps({'error': 'bad API arguments'})
+def bad_request(error):
+    return json.dumps(
+            {'error': 'bad API arguments: {}'.format(error.description)})
 
 @app.errorhandler(500)
-def bad_request():
-    return json.dumps({'error': 'Internal Server Error'})
+def bad_request(error):
+    return json.dumps(
+            {'error': 'Internal Server Error: {}'.format(error.description)})
 
 def get_restaurants():
     """
@@ -313,6 +378,7 @@ def get_restaurants():
     all_restaurants = cache.get('all_restaurants')
     if not all_restaurants:
         all_restaurants = session.query(
+            Restaurant.restaurant_id,
             Restaurant.google_id,
             Restaurant.db_name,
             Restaurant.db_addr,
@@ -341,7 +407,16 @@ def get_restaurants_dict():
         restaurants = get_restaurants()
         all_restaurants_dict = {}
         for restaurant in restaurants:
-            all_restaurants_dict[restaurant[0]] = restaurant.__dict__
+            all_restaurants_dict[restaurant[1]] = restaurant.__dict__
     
         cache.set('all_restaurants_dict', all_restaurants_dict, timeout=24*60*60)
     return all_restaurants_dict
+
+def convert_to_miles(meters):
+
+    if meters < 1609:
+        miles = '%.2f'%(meters*0.000621371)
+    else:
+        miles = '%.1f'%(meters*0.000621371)
+
+    return miles

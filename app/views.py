@@ -362,6 +362,10 @@ returns:
     # formulate json response
     return Response(json.dumps(results), mimetype='text/json')
 
+@app.route('/')
+def root():
+    return '<html></html>'
+
 @app.errorhandler(400)
 def bad_request(error):
     return json.dumps(

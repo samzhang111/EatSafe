@@ -7,5 +7,4 @@ Werkzeug==0.9.4
 argparse==1.2.1
 itsdangerous==0.23
 wsgiref==0.1.2
-whoosh==2.5.6
-flask-whooshalchemy==0.55
+gunicorn==19.0.0

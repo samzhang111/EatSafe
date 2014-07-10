@@ -1,4 +1,4 @@
-from eatsafeapp import app
+from eatsafeapp import eatsafeapp
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy import Column, Integer, Float, String, Date
 

@@ -6,7 +6,7 @@ if __name__ == '__main__':
     user = os.environ['EATSAFE_USER']
     pw = os.environ['EATSAFE_PW']
 
-    db_str = 'dbname={db} host=127.0.0.1 user={user} pw={pw}'.format(
+    db_str = 'dbname={db} host=127.0.0.1 user={user} password={pw}'.format(
             db=database,
             user=user,
             pw=pw)

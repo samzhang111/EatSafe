@@ -4,13 +4,12 @@ from flask import render_template
 from flask import request
 from flask import Response
 from flask import abort
-
 from simplejson import JSONDecodeError
-
 import json
 from database import session
 from schema import Inspection, Restaurant
 from math import radians, cos, sin, asin, sqrt
+import sqlalchemy
 from sqlalchemy.sql import func
 from helpers import haversine, get_rating, get_geo
 import requests
@@ -48,9 +47,14 @@ def inspection():
     inspection_id = request.args.get('id', '', type=str)
     if not inspection_id:
         abort(400)
+    
+    try:
+        q = session.query(Inspection.Violations).filter(
+                Inspection.Inspection_ID==inspection_id).all()
+    except sqlalchemy.exc.DataError:
+        session.rollback()
+        abort(400)
 
-    q = session.query(Inspection.Violations).filter(
-            Inspection.Inspection_ID==inspection_id).all()
     if q:
         return q[0]
 
@@ -208,28 +212,36 @@ def place():
     if not rid:
         abort(400)
 
-    info = session.query(
-        Restaurant.restaurant_id,
-        Restaurant.google_id,
-        Restaurant.db_name,
-        Restaurant.db_addr,
-        Restaurant.google_name,
-        Restaurant.google_lat,
-        Restaurant.google_lng,
-        Restaurant.yelp_name,
-        Restaurant.yelp_rating,
-        Restaurant.yelp_review_count,
-        Restaurant.yelp_photo_url,
-        Restaurant.yelp_rating_img_url,
-        Restaurant.yelp_address,
-        Restaurant.yelp_zip,
-        Restaurant.yelp_phone,
-        Restaurant.rating,
-        Restaurant.complaints,
-        Restaurant.db_long,
-        Restaurant.db_lat,
-        Restaurant.num,
-        Restaurant.failures).filter(Restaurant.restaurant_id==rid).one()
+    try:
+        info = session.query(
+            Restaurant.restaurant_id,
+            Restaurant.google_id,
+            Restaurant.db_name,
+            Restaurant.db_addr,
+            Restaurant.google_name,
+            Restaurant.google_lat,
+            Restaurant.google_lng,
+            Restaurant.yelp_name,
+            Restaurant.yelp_rating,
+            Restaurant.yelp_review_count,
+            Restaurant.yelp_photo_url,
+            Restaurant.yelp_rating_img_url,
+            Restaurant.yelp_address,
+            Restaurant.yelp_zip,
+            Restaurant.yelp_phone,
+            Restaurant.rating,
+            Restaurant.complaints,
+            Restaurant.db_long,
+            Restaurant.db_lat,
+            Restaurant.num,
+            Restaurant.failures).filter(Restaurant.restaurant_id==rid).first()
+    except sqlalchemy.exc.DataError:
+        # bad input
+        session.rollback()
+        abort(400)
+
+    if not info:
+        abort(400)
     
     info_dict = info.__dict__
 
@@ -256,7 +268,9 @@ def place():
     
     inspections_dict = []
     for inspection in inspections:
-        inspections_dict.append(dict(zip(inspection_cols, inspection)))
+        insp_d = dict(zip(inspection_cols, inspection))
+        insp_d['inspection_date'] = insp_d['inspection_date'].strftime('%Y-%m-%d')
+        inspections_dict.append(insp_d)
 
     returned = {
             'id': info_dict['restaurant_id'],
@@ -374,13 +388,14 @@ def root():
 
 @eatsafeapp.errorhandler(400)
 def bad_request(error):
-    return json.dumps(
-            {'error': 'bad API arguments: {}'.format(error.description)})
+    return Response(json.dumps(
+            {'error': 'bad API arguments: {}'.format(error.description)}),
+            mimetype='text/json')
 
 @eatsafeapp.errorhandler(500)
 def bad_request(error):
-    return json.dumps(
-            {'error': 'Internal Server Error: {}'.format(error.description)})
+    return Response(json.dumps(
+            {'error': 'Internal Server Error'}), mimetype='text/json')
 
 def get_restaurants():
     """

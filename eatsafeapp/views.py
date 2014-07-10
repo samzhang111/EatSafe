@@ -25,14 +25,20 @@ ykey = os.environ['YELP_KEY']
 
 cache = SimpleCache()
 #google API query
-gquery="https://maps.googleapis.com/maps/api/place/textsearch/json?query={q}&key={g}" 
+gquery="""https://maps.googleapis.com/maps/api/place/
+textsearch/json?query={q}&key={g}"""
+
 #yelp API query
-yquery = 'http://api.yelp.com/business_review_search?term={name}&location={addr}&limit=1&ywsid={y}'
+yquery = """http://api.yelp.com/business_review_search?
+term={name}&location={addr}&limit=1&ywsid={y}"""
+
 #google instant API
-ginstant = 'https://maps.googleapis.com/maps/api/place/autocomplete/json?input={substring}&types=establishment&radius=500&location={lat},{lng}&key={g}'
+ginstant = """https://maps.googleapis.com/maps/api/place/
+autocomplete/json?input={substring}&types=establishment
+&radius=500&location={lat},{lng}&key={g}"""
 
-default_photo = 'http://s3-media1.fl.yelpcdn.com/assets/2/www/img/5f69f303f17c/default_avatars/business_medium_square.png'
-
+default_photo = """http://s3-media1.fl.yelpcdn.com/assets/2/www/
+img/5f69f303f17c/default_avatars/business_medium_square.png"""
 
 #============================================================================
 # Inspection detail API
@@ -45,7 +51,6 @@ def inspection():
 
     q = session.query(Inspection.Violations).filter(
             Inspection.Inspection_ID==inspection_id).all()
-
     if q:
         return q[0]
 

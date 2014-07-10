@@ -1,5 +1,5 @@
-from eatsafeapp import app
+from eatsafeapp import eatsafeapp
 
 if __name__ == '__main__':
-    app.debug = True
-    app.run()
+    eatsafeapp.debug = True
+    eatsafeapp.run()

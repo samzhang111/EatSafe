@@ -1,4 +1,4 @@
-from eatsafeapp import app
+from eatsafeapp import eatsafeapp
 import flask
 from flask import render_template
 from flask import request
@@ -37,7 +37,7 @@ default_photo = 'http://s3-media1.fl.yelpcdn.com/assets/2/www/img/5f69f303f17c/d
 #============================================================================
 # Inspection detail API
 ##===========================================================================
-@app.route('/inspection')
+@eatsafeapp.route('/inspection')
 def inspection():
     inspection_id = request.args.get('id', '', type=str)
     if not inspection_id:
@@ -50,7 +50,7 @@ def inspection():
         return q[0]
 
 
-@app.route('/instant')
+@eatsafeapp.route('/instant')
 def instant():
     """
     /instant
@@ -162,7 +162,7 @@ def instant():
     return Response(json.dumps(result), mimetype='text/json')
 """
 
-@app.route('/place')
+@eatsafeapp.route('/place')
 def place():
     """
     /place
@@ -271,7 +271,7 @@ def place():
     return Response(json.dumps(returned), mimetype='text/json')
 
 
-@app.route('/near')
+@eatsafeapp.route('/near')
 def check():
     """
 
@@ -363,16 +363,16 @@ returns:
     # formulate json response
     return Response(json.dumps(results), mimetype='text/json')
 
-@app.route('/')
+@eatsafeapp.route('/')
 def root():
     return '<html></html>'
 
-@app.errorhandler(400)
+@eatsafeapp.errorhandler(400)
 def bad_request(error):
     return json.dumps(
             {'error': 'bad API arguments: {}'.format(error.description)})
 
-@app.errorhandler(500)
+@eatsafeapp.errorhandler(500)
 def bad_request(error):
     return json.dumps(
             {'error': 'Internal Server Error: {}'.format(error.description)})

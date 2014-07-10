@@ -32,7 +32,6 @@ yquery = "http://api.yelp.com/business_review_search?term={name}&location={addr}
 #google instant API
 ginstant = "https://maps.googleapis.com/maps/api/place/autocomplete/json?input={substring}&types=establishment&radius=500&location={lat},{lng}&key={g}"
 
-default_photo = "http://s3-media1.fl.yelpcdn.com/assets/2/www/img/5f69f303f17c/default_avatars/business_medium_square.png"
 
 #============================================================================
 # Inspection detail API
@@ -118,7 +117,7 @@ def instant():
         
         name = d['google_name'] or d['yelp_name'] or d['db_name']
         addr = d['yelp_address'] or d['db_addr']
-        photo = d['yelp_photo_url'] or default_photo
+        photo = d['yelp_photo_url'] or ''
         
         rating = get_rating(d['rating'])
         d['d'] = haversine(lon, lat, longitude, latitude)
@@ -263,7 +262,7 @@ def place():
 
     name = info_dict['google_name'] or info_dict['db_name']
     addr = info_dict['yelp_address'] or info_dict['db_addr']
-    photo = info_dict['yelp_photo_url'] or default_photo
+    photo = info_dict['yelp_photo_url'] or ''
     rating = get_rating(info_dict['rating'])
     new = info_dict['num'] <= 1
     
@@ -361,7 +360,7 @@ returns:
     
     for row in closest:
         addr = row['yelp_address'] or row['db_addr']
-        photo = row['yelp_photo_url'] or default_photo
+        photo = row['yelp_photo_url'] or ''
         
         rating = get_rating(row['rating'])
         new = row['num'] <= 1

@@ -24,20 +24,15 @@ ykey = os.environ['YELP_KEY']
 
 cache = SimpleCache()
 #google API query
-gquery="""https://maps.googleapis.com/maps/api/place/
-textsearch/json?query={q}&key={g}"""
+gquery="https://maps.googleapis.com/maps/api/place/textsearch/json?query={q}&key={g}"
 
 #yelp API query
-yquery = """http://api.yelp.com/business_review_search?
-term={name}&location={addr}&limit=1&ywsid={y}"""
+yquery = "http://api.yelp.com/business_review_search?term={name}&location={addr}&limit=1&ywsid={y}"
 
 #google instant API
-ginstant = """https://maps.googleapis.com/maps/api/place/
-autocomplete/json?input={substring}&types=establishment
-&radius=500&location={lat},{lng}&key={g}"""
+ginstant = "https://maps.googleapis.com/maps/api/place/autocomplete/json?input={substring}&types=establishment&radius=500&location={lat},{lng}&key={g}"
 
-default_photo = """http://s3-media1.fl.yelpcdn.com/assets/2/www/
-img/5f69f303f17c/default_avatars/business_medium_square.png"""
+default_photo = "http://s3-media1.fl.yelpcdn.com/assets/2/www/img/5f69f303f17c/default_avatars/business_medium_square.png"
 
 #============================================================================
 # Inspection detail API
@@ -82,7 +77,6 @@ def instant():
             lng=longitude,
             g=gkey
             )
-
     q = session.query(
         Restaurant.restaurant_id,
         Restaurant.google_id,
@@ -113,8 +107,12 @@ def instant():
     for row in q:
         d = row.__dict__
         d.pop('_labels')
-        lon = d['db_long'] or float(d['google_lng'])
-        lat = d['db_lat'] or float(d['google_lat'])
+        try:
+            lon = d['db_long'] or float(d['google_lng'])
+            lat = d['db_lat'] or float(d['google_lat'])
+        except TypeError:
+            # no long or lat info
+            continue
         
         name = d['google_name'] or d['yelp_name'] or d['db_name']
         addr = d['yelp_address'] or d['db_addr']
@@ -141,8 +139,9 @@ def instant():
 
     return Response(json.dumps(results), mimetype='text/json')
 
-"""
+    """
     try:
+        print gq
         r = requests.get(gq)
     except requests.ConnectionError:
         abort(500)
@@ -167,9 +166,9 @@ def instant():
             result.append(rd[answer['place_id']])
         except KeyError:
             pass
+    """
 
     return Response(json.dumps(result), mimetype='text/json')
-"""
 
 @eatsafeapp.route('/place')
 def place():

@@ -6,7 +6,7 @@ Base = declarative_base()
 
 class Inspection(Base):
     __tablename__ = 'inspections_clean'
-    Inspection_ID = Column(String, primary_key=True)
+    Inspection_ID = Column(Integer, primary_key=True)
     restaurant_id = Column(Integer)
     DBA_Name = Column(String)
     AKA_Name = Column(String)

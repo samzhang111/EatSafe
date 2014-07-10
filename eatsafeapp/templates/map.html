@@ -1,0 +1,17 @@
+<!DOCTYPE html>
+<html>
+		<head>
+    <meta name="viewport" content="initial-scale=1.0, user-scalable=no" />
+		<link rel="stylesheet" href="{{ url_for('static', filename='stylesheets/map.css') }}" type="text/css" charset="utf-8">
+		<script src="{{url_for('static', filename='scripts/jquery-1.9.1.min.js')}}"></script>
+		<script src="{{url_for('static', filename='scripts/map.js')}}"></script>
+    <script type="text/javascript"
+src="https://maps.googleapis.com/maps/api/js?key={{key}}">
+		</script>
+		</head>
+		<body>
+		
+		<div class="map-canvas"></div>
+		
+		</body>
+</html>

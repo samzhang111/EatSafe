@@ -16,6 +16,7 @@ from helpers import haversine, get_rating, get_geo
 import requests
 import urllib
 #from settings import gkey, ykey
+import sys
 import os
 from werkzeug.contrib.cache import SimpleCache
 

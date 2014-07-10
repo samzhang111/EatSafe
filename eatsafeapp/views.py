@@ -45,13 +45,15 @@ def inspection():
     
     try:
         q = session.query(Inspection.Violations).filter(
-                Inspection.Inspection_ID==inspection_id).all()
+                Inspection.Inspection_ID==inspection_id).first()
     except sqlalchemy.exc.DataError:
         session.rollback()
         abort(400)
 
     if q:
-        return q[0]
+        return q
+    else:
+        return Response(json.dumps({}), mimetype='text/json')
 
 
 @eatsafeapp.route('/instant')
@@ -269,6 +271,7 @@ def place():
     for inspection in inspections:
         insp_d = dict(zip(inspection_cols, inspection))
         insp_d['inspection_date'] = insp_d['inspection_date'].strftime('%Y-%m-%d')
+        insp_d['inspection_id'] = int(insp_d['inspection_id'])
         inspections_dict.append(insp_d)
 
     returned = {

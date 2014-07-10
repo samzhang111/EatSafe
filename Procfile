@@ -1,1 +1,1 @@
-web: gunicorn --access-logfile /tmp/errors.log app:app -b 0.0.0.0:$PORT
+web: gunicorn -c gunicorn.py app:app -b 0.0.0.0:$PORT

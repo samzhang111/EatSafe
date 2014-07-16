@@ -118,6 +118,7 @@ def instant():
         name = d['google_name'] or d['yelp_name'] or d['db_name']
         addr = d['yelp_address'] or d['db_addr']
         photo = d['yelp_photo_url'] or ''
+        yelp_rating = d['yelp_rating'] or 0
         
         rating = get_rating(d['rating'])
         d['d'] = haversine(lon, lat, longitude, latitude)
@@ -129,7 +130,7 @@ def instant():
                 'dist': convert_to_miles(d['d']),
                 'pic': photo,
                 'rating': rating,
-                'yelp_rating': d['yelp_rating'],
+                'yelp_rating': yelp_rating,
                 'new': d['num'] <= 1,
                 'count': d['num'] 
             })
@@ -263,6 +264,8 @@ def place():
     name = info_dict['google_name'] or info_dict['db_name']
     addr = info_dict['yelp_address'] or info_dict['db_addr']
     photo = info_dict['yelp_photo_url'] or ''
+    yelp_rating = info_dict['yelp_rating'] or 0
+
     rating = get_rating(info_dict['rating'])
     new = info_dict['num'] <= 1
     
@@ -282,7 +285,7 @@ def place():
             'rating': rating,
             'count': info_dict['num'],
             'fails': info_dict['failures'],
-            'yelp_rating': info_dict['yelp_rating'],
+            'yelp_rating': yelp_rating,
             'yelp_review_count': info_dict['yelp_review_count'],
             'new': new,
             'inspections': inspections_dict
@@ -367,7 +370,8 @@ returns:
         
         
         name = row['google_name'] or row['yelp_name'] or row['db_name']
-        
+        yelp_rating = row['yelp_rating'] or 0
+
         results.append({
                 'name': row['google_name'],
                 'id': row['restaurant_id'],
@@ -375,7 +379,7 @@ returns:
                 'dist': miles,
                 'pic': photo,
                 'rating': rating,
-                'yelp_rating': row['yelp_rating'],
+                'yelp_rating': yelp_rating,
                 'new': new
             })
     

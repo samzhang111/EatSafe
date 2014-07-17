@@ -279,7 +279,7 @@ def place():
     returned = {
             'id': info_dict['restaurant_id'],
             'name': name,
-            'addr': addr,
+            'address': addr,
             'pic': photo,
             'phone': info_dict['yelp_phone'],
             'rating': rating,

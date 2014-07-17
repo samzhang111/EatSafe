@@ -368,12 +368,11 @@ returns:
         rating = get_rating(row['rating'])
         new = row['num'] <= 1
         
-        
         name = row['google_name'] or row['yelp_name'] or row['db_name']
         yelp_rating = row['yelp_rating'] or 0
 
         results.append({
-                'name': row['google_name'],
+                'name': name,
                 'id': row['restaurant_id'],
                 'address': addr,
                 'dist': miles,

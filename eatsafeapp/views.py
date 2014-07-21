@@ -1,23 +1,26 @@
 from eatsafeapp import eatsafeapp
+from database import db
+from schema import Inspection, Restaurant
+
 import flask
 from flask import render_template
 from flask import request
 from flask import Response
 from flask import abort
+
 from simplejson import JSONDecodeError
 import json
-from database import session
-from schema import Inspection, Restaurant
 from math import radians, cos, sin, asin, sqrt
+
 import sqlalchemy
 from sqlalchemy.sql import func
 from helpers import haversine, get_rating, get_geo
 import requests
 import urllib
-#from settings import gkey, ykey
 import sys
 import os
 from werkzeug.contrib.cache import SimpleCache
+from flask import jsonify
 
 gkey = os.environ['GOOGLE_PLACES_KEY']
 ykey = os.environ['YELP_KEY']
@@ -43,17 +46,23 @@ def inspection():
         abort(400)
     
     try:
-        q = session.query(Inspection.Violations).filter(
+        q = db.session.query(Inspection.Violations,
+                        Inspection.Inspection_Type,
+                        Inspection.Inspection_Date,
+                        Inspection.ResultsNum,
+                ).filter(
                 Inspection.Inspection_ID==inspection_id).first()
     except sqlalchemy.exc.DataError:
-        session.rollback()
+        db.session.rollback()
         abort(400)
-
     if q:
-        return q
+        return jsonify({'inspection_text': q[0],
+            'inspection_type': q[1],
+            'inspection_date': q[2].strftime('%Y-%m-%d'),
+            'inspection_result': q[3]
+            })
     else:
-        return Response(json.dumps({}), mimetype='text/json')
-
+        return jsonify({})
 
 @eatsafeapp.route('/instant')
 def instant():
@@ -78,7 +87,7 @@ def instant():
             lng=longitude,
             g=gkey
             )
-    q = session.query(
+    q = db.session.query(
         Restaurant.restaurant_id,
         Restaurant.google_id,
         Restaurant.db_name,
@@ -141,37 +150,6 @@ def instant():
 
     return Response(json.dumps(results), mimetype='text/json')
 
-    """
-    try:
-        print gq
-        r = requests.get(gq)
-    except requests.ConnectionError:
-        abort(500)
-
-    if not r.ok:
-        abort(500)
-
-    try:
-        j = r.json()
-    except JSONDecodeError:
-        abort(500)
-
-    if not j['status'] == 'OK':
-        abort(500)
-    
-    rd = get_restaurants_dict()
-
-    result = [] 
-    for answer in j['predictions']:
-        try:
-            rd[answer['place_id']].pop('_labels')
-            result.append(rd[answer['place_id']])
-        except KeyError:
-            pass
-    """
-
-    return Response(json.dumps(result), mimetype='text/json')
-
 @eatsafeapp.route('/place')
 def place():
     """
@@ -208,13 +186,13 @@ def place():
     }
     """ 
 
-    rid = request.args.get('id', '', type=str)
+    rid = request.args.get('id', '', type=int)
     
     if not rid:
         abort(400)
 
     try:
-        info = session.query(
+        info = db.session.query(
             Restaurant.restaurant_id,
             Restaurant.google_id,
             Restaurant.db_name,
@@ -238,7 +216,7 @@ def place():
             Restaurant.failures).filter(Restaurant.restaurant_id==rid).first()
     except sqlalchemy.exc.DataError:
         # bad input
-        session.rollback()
+        db.session.rollback()
         abort(400)
 
     if not info:
@@ -249,17 +227,18 @@ def place():
     inspection_cols = ['inspection_id',
             'inspection_date',
             'inspection_result',
-            'inspection_type']
+            'inspection_type',
+            'inspection_results_num']
     inspection_keys = {x:i for i,x in enumerate(inspection_cols)}
 
-    inspections = session.query(
+    inspections = db.session.query(
             Inspection.Inspection_ID,
             Inspection.Inspection_Date,
             Inspection.Results,
-            Inspection.Inspection_Type
+            Inspection.Inspection_Type,
+            Inspection.ResultsNum
             ).filter(
-                    Inspection.AKA_Name==info_dict['db_name'] and
-                    Inspection.Address==info_dict['db_addr']).all()
+                    Inspection.RestaurantID==rid).all()
 
     name = info_dict['google_name'] or info_dict['db_name']
     addr = info_dict['yelp_address'] or info_dict['db_addr']
@@ -272,8 +251,9 @@ def place():
     inspections_dict = []
     for inspection in inspections:
         insp_d = dict(zip(inspection_cols, inspection))
-        insp_d['inspection_date'] = insp_d['inspection_date'].strftime('%Y-%m-%d')
         insp_d['inspection_id'] = int(insp_d['inspection_id'])
+        insp_d['inspection_date'] = insp_d['inspection_date']\
+                .strftime('%Y-%m-%d')
         inspections_dict.append(insp_d)
 
     returned = {
@@ -291,7 +271,7 @@ def place():
             'inspections': inspections_dict
             }
     
-    return Response(json.dumps(returned), mimetype='text/json')
+    return jsonify(returned)
 
 
 @eatsafeapp.route('/near')
@@ -392,14 +372,12 @@ def root():
 
 @eatsafeapp.errorhandler(400)
 def bad_request(error):
-    return Response(json.dumps(
-            {'error': 'bad API arguments: {}'.format(error.description)}),
-            mimetype='text/json')
+    return jsonify(
+            {'error': 'bad API arguments: {}'.format(error.description)})
 
 @eatsafeapp.errorhandler(500)
 def bad_request(error):
-    return Response(json.dumps(
-            {'error': 'Internal Server Error'}), mimetype='text/json')
+    return jsonify({'error': 'Internal Server Error'})
 
 def get_restaurants():
     """
@@ -409,7 +387,7 @@ def get_restaurants():
     """
     all_restaurants = cache.get('all_restaurants')
     if not all_restaurants:
-        all_restaurants = session.query(
+        all_restaurants = db.session.query(
             Restaurant.restaurant_id,
             Restaurant.google_id,
             Restaurant.db_name,

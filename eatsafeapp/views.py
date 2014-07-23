@@ -265,6 +265,7 @@ def place():
             'rating': rating,
             'count': info_dict['num'],
             'fails': info_dict['failures'],
+            'complaints': info_dict['complaints'],
             'yelp_rating': yelp_rating,
             'yelp_review_count': info_dict['yelp_review_count'],
             'new': new,

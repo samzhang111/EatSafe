@@ -336,8 +336,7 @@ returns:
         d = haversine(longitude, latitude, lng, lat)
 
         if d < MAX_DIST:
-            row['d'] = d
-            miles = convert_to_miles(d)
+            row['d'] = convert_to_miles(d)
             valid.append(row)
 
     closest = sorted(valid, key=lambda x: x['d'])[:20]
@@ -356,7 +355,7 @@ returns:
                 'name': name,
                 'id': row['restaurant_id'],
                 'address': addr,
-                'dist': miles,
+                'dist': row['d'],
                 'pic': photo,
                 'rating': rating,
                 'yelp_rating': yelp_rating,

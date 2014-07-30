@@ -62,3 +62,4 @@ class Restaurant(db.Model):
     db_lat = db.Column(db.Float)
     db_long = db.Column(db.Float)
     restaurant_id = db.Column(db.Integer, primary_key=True)
+    no_recent_fails = db.Column(db.Integer)

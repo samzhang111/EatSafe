@@ -107,7 +107,8 @@ def instant():
         Restaurant.db_long,
         Restaurant.db_lat,
         Restaurant.num,
-        Restaurant.failures).\
+        Restaurant.failures,
+        Restaurant.no_recent_fails).\
                 filter(Restaurant.db_name.ilike('%{}%'.format(query))|
                         Restaurant.db_addr.ilike('%{}%'.format(query)))\
                 .all()
@@ -141,7 +142,8 @@ def instant():
                 'rating': rating,
                 'yelp_rating': yelp_rating,
                 'new': d['num'] <= 1,
-                'count': d['num'] 
+                'count': d['num'],
+                'no_recent_fails': d['no_recent_fails']
             })
 
     results = sorted(results, key=lambda x: x['d'])[:10]
@@ -213,7 +215,9 @@ def place():
             Restaurant.db_long,
             Restaurant.db_lat,
             Restaurant.num,
-            Restaurant.failures).filter(Restaurant.restaurant_id==rid).first()
+            Restaurant.failures,
+            Restaurant.no_recent_fails).filter(
+                    Restaurant.restaurant_id==rid).first()
     except sqlalchemy.exc.DataError:
         # bad input
         db.session.rollback()
@@ -246,7 +250,7 @@ def place():
     yelp_rating = info_dict['yelp_rating'] or 0
 
     rating = get_rating(info_dict['rating'])
-    new = info_dict['num'] <= 1
+    new = int(info_dict['num'] <= 1)
     
     inspections_dict = []
     for inspection in inspections:
@@ -269,17 +273,17 @@ def place():
             'yelp_rating': yelp_rating,
             'yelp_review_count': info_dict['yelp_review_count'],
             'new': new,
+            'no_recent_fails': info_dict['no_recent_fails'],
             'inspections': inspections_dict
             }
     
     return jsonify(returned)
 
-
 @eatsafeapp.route('/near')
-def check():
+def near():
     """
 
-    check():
+    near():
 
      route /near?
      find nearby restaurants and their aggregate health inspection scores
@@ -359,7 +363,8 @@ returns:
                 'pic': photo,
                 'rating': rating,
                 'yelp_rating': yelp_rating,
-                'new': new
+                'new': new,
+                'no_recent_fails': row['no_recent_fails']
             })
     
     
@@ -407,7 +412,8 @@ def get_restaurants():
             Restaurant.complaints,
             Restaurant.db_long,
             Restaurant.db_lat,
-            Restaurant.num).all()
+            Restaurant.num,
+            Restaurant.no_recent_fails).all()
         cache.set('all_restaurants', all_restaurants, timeout=24*60*60)
     return all_restaurants
 

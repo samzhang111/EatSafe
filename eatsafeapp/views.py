@@ -107,7 +107,8 @@ def instant():
         Restaurant.db_long,
         Restaurant.db_lat,
         Restaurant.num,
-        Restaurant.failures).\
+        Restaurant.failures,
+        Restaurant.no_recent_fails).\
                 filter(Restaurant.db_name.ilike('%{}%'.format(query))|
                         Restaurant.db_addr.ilike('%{}%'.format(query)))\
                 .all()
@@ -141,7 +142,8 @@ def instant():
                 'rating': rating,
                 'yelp_rating': yelp_rating,
                 'new': d['num'] <= 1,
-                'count': d['num'] 
+                'count': d['num'],
+                'no_recent_fails': d['no_recent_fails']
             })
 
     results = sorted(results, key=lambda x: x['d'])[:10]
@@ -213,7 +215,9 @@ def place():
             Restaurant.db_long,
             Restaurant.db_lat,
             Restaurant.num,
-            Restaurant.failures).filter(Restaurant.restaurant_id==rid).first()
+            Restaurant.failures,
+            Restaurant.no_recent_fails).filter(
+                    Restaurant.restaurant_id==rid).first()
     except sqlalchemy.exc.DataError:
         # bad input
         db.session.rollback()
@@ -246,7 +250,7 @@ def place():
     yelp_rating = info_dict['yelp_rating'] or 0
 
     rating = get_rating(info_dict['rating'])
-    new = info_dict['num'] <= 1
+    new = int(info_dict['num'] <= 1)
     
     inspections_dict = []
     for inspection in inspections:
@@ -276,10 +280,10 @@ def place():
 
 
 @eatsafeapp.route('/near')
-def check():
+def near():
     """
 
-    check():
+    near():
 
      route /near?
      find nearby restaurants and their aggregate health inspection scores
@@ -287,6 +291,10 @@ def check():
      required variables:
      -long: the longitude to search near
      -lat: the latitude to search near
+
+     optional variables:
+     -radius: maximum radius in meters
+     -max: maximum number of restaurants to return
 
 returns:
      {
@@ -296,7 +304,9 @@ returns:
      'dist': distance in miles,
      'pic': link to photo,
      'rating': letter rating (A, B, C, F, ?),
-     'yelp_rating': yelp rating (float: 0, 0.5, ..., 3.5, 4)
+     'yelp_rating': yelp rating (float: 0, 0.5, ..., 3.5, 4),
+     'long': longitude,
+     'lat': latitude
      }
      
      a json string object of list of closest 20 restaurants and their health
@@ -305,9 +315,10 @@ returns:
      note: distance is returned in miles
 
     """
-    MAX_DIST = 5000
     longitude = request.args.get('long', '', type=float)
     latitude = request.args.get('lat', '', type=float)
+    MAX_DIST = request.args.get('radius', 5000.0, type=float)
+    MAX_NUM = request.args.get('max', 20, type=int)
 
     if not (longitude and latitude):
         abort(400)
@@ -336,11 +347,10 @@ returns:
         d = haversine(longitude, latitude, lng, lat)
         row['long'], row['lat'] = lng, lat
         if d < MAX_DIST:
-            row['d'] = d
-            miles = convert_to_miles(d)
+            row['d'] = convert_to_miles(d)
             valid.append(row)
 
-    closest = sorted(valid, key=lambda x: x['d'])[:20]
+    closest = sorted(valid, key=lambda x: x['d'])[:MAX_NUM]
     
     for row in closest:
         addr = row['yelp_address'] or row['db_addr']
@@ -356,11 +366,12 @@ returns:
                 'name': name,
                 'id': row['restaurant_id'],
                 'address': addr,
-                'dist': miles,
+                'dist': row['d'],
                 'pic': photo,
                 'rating': rating,
                 'yelp_rating': yelp_rating,
                 'new': new,
+                'no_recent_fails': row['no_recent_fails'],
                 'long': row['long'],
                 'lat': row['lat']
             })
@@ -410,7 +421,8 @@ def get_restaurants():
             Restaurant.complaints,
             Restaurant.db_long,
             Restaurant.db_lat,
-            Restaurant.num).all()
+            Restaurant.num,
+            Restaurant.no_recent_fails).all()
         cache.set('all_restaurants', all_restaurants, timeout=24*60*60)
     return all_restaurants
 

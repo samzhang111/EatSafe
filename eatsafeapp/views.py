@@ -107,8 +107,7 @@ def instant():
         Restaurant.db_long,
         Restaurant.db_lat,
         Restaurant.num,
-        Restaurant.failures,
-        Restaurant.no_recent_fails).\
+        Restaurant.failures).\
                 filter(Restaurant.db_name.ilike('%{}%'.format(query))|
                         Restaurant.db_addr.ilike('%{}%'.format(query)))\
                 .all()
@@ -142,8 +141,7 @@ def instant():
                 'rating': rating,
                 'yelp_rating': yelp_rating,
                 'new': d['num'] <= 1,
-                'count': d['num'],
-                'no_recent_fails': d['no_recent_fails']
+                'count': d['num'] 
             })
 
     results = sorted(results, key=lambda x: x['d'])[:10]
@@ -215,9 +213,7 @@ def place():
             Restaurant.db_long,
             Restaurant.db_lat,
             Restaurant.num,
-            Restaurant.failures,
-            Restaurant.no_recent_fails).filter(
-                    Restaurant.restaurant_id==rid).first()
+            Restaurant.failures).filter(Restaurant.restaurant_id==rid).first()
     except sqlalchemy.exc.DataError:
         # bad input
         db.session.rollback()
@@ -250,7 +246,7 @@ def place():
     yelp_rating = info_dict['yelp_rating'] or 0
 
     rating = get_rating(info_dict['rating'])
-    new = int(info_dict['num'] <= 1)
+    new = info_dict['num'] <= 1
     
     inspections_dict = []
     for inspection in inspections:
@@ -273,17 +269,17 @@ def place():
             'yelp_rating': yelp_rating,
             'yelp_review_count': info_dict['yelp_review_count'],
             'new': new,
-            'no_recent_fails': info_dict['no_recent_fails'],
             'inspections': inspections_dict
             }
     
     return jsonify(returned)
 
+
 @eatsafeapp.route('/near')
-def near():
+def check():
     """
 
-    near():
+    check():
 
      route /near?
      find nearby restaurants and their aggregate health inspection scores
@@ -338,9 +334,10 @@ returns:
             lng, lat = map(float, (row['db_long'], row['db_lat']))
 
         d = haversine(longitude, latitude, lng, lat)
-
+        row['long'], row['lat'] = lng, lat
         if d < MAX_DIST:
-            row['d'] = convert_to_miles(d)
+            row['d'] = d
+            miles = convert_to_miles(d)
             valid.append(row)
 
     closest = sorted(valid, key=lambda x: x['d'])[:20]
@@ -359,12 +356,13 @@ returns:
                 'name': name,
                 'id': row['restaurant_id'],
                 'address': addr,
-                'dist': row['d'],
+                'dist': miles,
                 'pic': photo,
                 'rating': rating,
                 'yelp_rating': yelp_rating,
                 'new': new,
-                'no_recent_fails': row['no_recent_fails']
+                'long': row['long'],
+                'lat': row['lat']
             })
     
     
@@ -412,8 +410,7 @@ def get_restaurants():
             Restaurant.complaints,
             Restaurant.db_long,
             Restaurant.db_lat,
-            Restaurant.num,
-            Restaurant.no_recent_fails).all()
+            Restaurant.num).all()
         cache.set('all_restaurants', all_restaurants, timeout=24*60*60)
     return all_restaurants
 

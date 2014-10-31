@@ -41,7 +41,7 @@ ginstant = "https://maps.googleapis.com/maps/api/place/autocomplete/json?input={
 ##===========================================================================
 @eatsafeapp.route('/inspection')
 def inspection():
-    inspection_id = request.args.get('id', '', type=str)
+    inspection_id = request.args.get('id', '', type=int)
     if not inspection_id:
         abort(400)
     

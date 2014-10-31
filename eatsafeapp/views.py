@@ -21,6 +21,7 @@ import sys
 import os
 from werkzeug.contrib.cache import SimpleCache
 from flask import jsonify
+from pprint import pprint
 
 gkey = os.environ['GOOGLE_PLACES_KEY']
 ykey = os.environ['YELP_KEY']
@@ -41,7 +42,7 @@ ginstant = "https://maps.googleapis.com/maps/api/place/autocomplete/json?input={
 ##===========================================================================
 @eatsafeapp.route('/inspection')
 def inspection():
-    inspection_id = request.args.get('id', '', type=int)
+    inspection_id = float(request.args.get('id', '', type=int))
     if not inspection_id:
         abort(400)
     
@@ -75,9 +76,10 @@ def instant():
            
     if long and lat are not provided, the center of Chicago is used
     """
+
     query = request.args.get('query', '', type=str)
-    longitude = request.args.get('long', '-87.625916', type=float)
-    latitude = request.args.get('lat', '41.903196', type=float)
+    longitude = float(request.args.get('long', '-87.625916', type=float))
+    latitude = float(request.args.get('lat', '41.903196', type=float))
     
     if not query or not longitude or not latitude:
         abort(400)
@@ -114,7 +116,8 @@ def instant():
                 .all()
     
     results = []
-    
+
+
     for row in q:
         d = row.__dict__
         d.pop('_labels')

@@ -126,6 +126,7 @@ def instant():
             lat = d['db_lat'] or float(d['google_lat'])
         except TypeError:
             # no long or lat info
+            lon, lat = None, None # This may not be necessary; some tests would show.
             continue
         
         name = d['google_name'] or d['yelp_name'] or d['db_name']
@@ -146,7 +147,9 @@ def instant():
                 'yelp_rating': yelp_rating,
                 'new': d['num'] <= 1,
                 'count': d['num'],
-                'no_recent_fails': d['no_recent_fails']
+                'no_recent_fails': d['no_recent_fails'],
+                'long': lon,
+                'lat': lat
             })
 
     results = sorted(results, key=lambda x: x['d'])[:10]

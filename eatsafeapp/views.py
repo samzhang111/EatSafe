@@ -125,7 +125,8 @@ def instant():
             lon = d['db_long'] or float(d['google_lng'])
             lat = d['db_lat'] or float(d['google_lat'])
         except TypeError:
-            lon, lat = None, None
+            # no long or lat info
+            lon, lat = None, None # This may not be necessary; some tests would show.
             continue
         
         name = d['google_name'] or d['yelp_name'] or d['db_name']
